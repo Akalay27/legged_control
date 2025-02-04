@@ -20,6 +20,8 @@
 #include "legged_controllers/SafetyChecker.h"
 #include "legged_controllers/visualization/LeggedSelfCollisionVisualization.h"
 
+#include <legged_estimation/ContactEstimate.h>
+
 namespace legged {
 using namespace ocs2;
 using namespace legged_robot;
@@ -50,11 +52,23 @@ class LeggedController : public controller_interface::MultiInterfaceController<H
   std::vector<ContactSensorHandle> contactHandles_;
   hardware_interface::ImuSensorHandle imuSensorHandle_;
 
+  ros::Publisher leg1_contact_force_pub;
+  ros::Publisher leg2_contact_force_pub;
+  ros::Publisher leg3_contact_force_pub;
+  ros::Publisher leg4_contact_force_pub;
+
+  std_msgs::Int16 leg1_contact_force;
+  std_msgs::Int16 leg2_contact_force;
+  std_msgs::Int16 leg3_contact_force;
+  std_msgs::Int16 leg4_contact_force;
+
   // State Estimation
   SystemObservation currentObservation_;
   vector_t measuredRbdState_;
   std::shared_ptr<StateEstimateBase> stateEstimate_;
+  std::shared_ptr<ContactEstimate> contactEstimate_;
   std::shared_ptr<CentroidalModelRbdConversions> rbdConversions_;
+  contact_flag_t contactFlag;
 
   // Whole Body Control
   std::shared_ptr<WbcBase> wbc_;
@@ -68,6 +82,8 @@ class LeggedController : public controller_interface::MultiInterfaceController<H
   std::shared_ptr<LeggedRobotVisualizer> robotVisualizer_;
   std::shared_ptr<LeggedSelfCollisionVisualization> selfCollisionVisualization_;
   ros::Publisher observationPublisher_;
+
+  size_t updatedMode;
 
  private:
   std::thread mpcThread_;
