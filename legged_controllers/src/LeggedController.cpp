@@ -103,6 +103,10 @@ void LeggedController::update(const ros::Time& time, const ros::Duration& period
   // State Estimate
   updateStateEstimation(time, period);
 
+  if(measuredRbdState_(5) > 0.25){
+    currentObservation_.mode = updatedMode;
+  }
+
   // Update the current state of the system
   mpcMrtInterface_->setCurrentObservation(currentObservation_);
 
@@ -122,13 +126,9 @@ void LeggedController::update(const ros::Time& time, const ros::Duration& period
   wbcTimer_.endTimer();
 
   vector_t torque = x.tail(12);
-  // updatedMode = contactEstimate_->update(currentObservation_.time, period, optimizedInput, measuredRbdState_, torque, contactFlag, mpcMrtInterface_->activePrimalSolutionPtr_->modeSchedule_);
+  updatedMode = contactEstimate_->update(currentObservation_.time, period, optimizedInput, measuredRbdState_, torque, contactFlag, mpcMrtInterface_->activePrimalSolutionPtr_->modeSchedule_);
   
   std::cout << measuredRbdState_(5) << std::endl;
-
-  // if(measuredRbdState_(5) > 0.25){
-  //   currentObservation_.mode = updatedMode;
-  // }
 
   leg1_contact_force.data = contactFlag[0];
   leg2_contact_force.data = contactFlag[1];
@@ -202,10 +202,6 @@ void LeggedController::updateStateEstimation(const ros::Time& time, const ros::D
   currentObservation_.state = rbdConversions_->computeCentroidalStateFromRbdModel(measuredRbdState_);
   currentObservation_.state(9) = yawLast + angles::shortest_angular_distance(yawLast, currentObservation_.state(9));
   currentObservation_.mode = stateEstimate_->getMode();
-
-  if(measuredRbdState_(5) > 0.25){
-    currentObservation_.mode = updatedMode;
-  }
 }
 
 LeggedController::~LeggedController() {
