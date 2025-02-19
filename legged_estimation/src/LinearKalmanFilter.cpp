@@ -166,11 +166,10 @@ void KalmanFilterEstimate::updateFromTopic() {
 
   tf2::Transform world2sensor;
   world2sensor.setOrigin(tf2::Vector3(msg->pose.pose.position.x, msg->pose.pose.position.y, msg->pose.pose.position.z));
-  world2sensor.setRotation(tf2::Quaternion(msg->pose.pose.orientation.x, msg->pose.pose.orientation.y, msg->pose.pose.orientation.z,
-                                           msg->pose.pose.orientation.w));
+  world2sensor.setRotation(tf2::Quaternion(msg->pose.pose.orientation.x, msg->pose.pose.orientation.y, 
+                                           msg->pose.pose.orientation.z, msg->pose.pose.orientation.w));
 
-  if (world2odom_.getRotation() == tf2::Quaternion::getIdentity())  // First received
-  {
+  if (world2odom_.getRotation() == tf2::Quaternion::getIdentity()) {
     tf2::Transform odom2sensor;
     try {
       geometry_msgs::TransformStamped tf_msg = tfBuffer_.lookupTransform("odom", msg->child_frame_id, msg->header.stamp);
@@ -181,6 +180,7 @@ void KalmanFilterEstimate::updateFromTopic() {
     }
     world2odom_ = world2sensor * odom2sensor.inverse();
   }
+
   tf2::Transform base2sensor;
   try {
     geometry_msgs::TransformStamped tf_msg = tfBuffer_.lookupTransform("base", msg->child_frame_id, msg->header.stamp);
@@ -192,24 +192,32 @@ void KalmanFilterEstimate::updateFromTopic() {
   tf2::Transform odom2base = world2odom_.inverse() * world2sensor * base2sensor.inverse();
   vector3_t newPos(odom2base.getOrigin().x(), odom2base.getOrigin().y(), odom2base.getOrigin().z());
 
-  const auto& model = pinocchioInterface_.getModel();
-  auto& data = pinocchioInterface_.getData();
+  // Define measurement model H (only position update)
+  Eigen::Matrix<scalar_t, 3, 18> h;
+  h.setZero();
+  h.block(0, 0, 3, 3) = Eigen::Matrix<scalar_t, 3, 3>::Identity();
 
-  vector_t qPino(info_.generalizedCoordinatesNum);
-  qPino.head<3>() = newPos;
-  qPino.segment<3>(3) = rbdState_.head<3>();
-  qPino.tail(info_.actuatedDofNum) = rbdState_.segment(6, info_.actuatedDofNum);
-  pinocchio::forwardKinematics(model, data, qPino);
-  pinocchio::updateFramePlacements(model, data);
-
-  xHat_.segment<3>(0) = newPos;
-  for (size_t i = 0; i < 4; ++i) {
-    xHat_.segment<3>(6 + i * 3) = eeKinematics_->getPosition(vector_t())[i];
-    xHat_(6 + i * 3 + 2) -= footRadius_;
-    if (contactFlag_[i]) {
-      feetHeights_[i] = xHat_(6 + i * 3 + 2);
+  // Extract odometry covariance
+  Eigen::Matrix<scalar_t, 3, 3> r_odometry;
+  for (int i = 0; i < 3; ++i) {
+    for (int j = 0; j < 3; ++j) {
+      r_odometry(i, j) = msg->pose.covariance[i * 6 + j];
     }
   }
+  
+  // Compute residual
+  Eigen::Matrix<scalar_t, 3, 1> y_odometry = newPos - h * xHat_;
+  
+  // Compute Kalman gain
+  Eigen::Matrix<scalar_t, 3, 3> s_odometry = h * p_ * h.transpose() + r_odometry;
+  Eigen::Matrix<scalar_t, 18, 3> k_odometry = p_ * h.transpose() * s_odometry.inverse();
+
+  // Apply Kalman update
+  xHat_ += k_odometry * y_odometry;
+  p_ = (Eigen::Matrix<scalar_t, 18, 18>::Identity() - k_odometry * h) * p_;
+  
+  // Ensure symmetry in covariance matrix
+  p_ = (p_ + p_.transpose()) / 2.0;
 
   auto odom = getOdomMsg();
   odom.header = msg->header;
