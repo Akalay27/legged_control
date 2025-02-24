@@ -62,6 +62,11 @@ class KalmanFilterEstimate : public StateEstimateBase {
   tf2::Transform world2odom_;
   std::string frameOdom_, frameGuess_;
   bool topicUpdated_;
+
+  bool odomInitialized_{false};             // Flag to indicate calibration completion.
+  int odomMsgCount_{0};                      // Count of received odometry messages.
+  vector3_t odomOffsetSum_{vector3_t::Zero()}; // Sum accumulator for offsets.
+  vector3_t odomOffset_{vector3_t::Zero()};    // Final averaged offset.
 };
 
 }  // namespace legged

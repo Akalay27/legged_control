@@ -2,7 +2,7 @@
 // Created by qiayuan on 2022/7/24.
 //
 
-#include "legged_estimation/FromTopiceEstimate.h"
+#include "legged_estimation/FromTopicEstimate.h"
 
 namespace legged {
 FromTopicStateEstimate::FromTopicStateEstimate(PinocchioInterface pinocchioInterface, CentroidalModelInfo info,

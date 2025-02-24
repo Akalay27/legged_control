@@ -167,7 +167,7 @@ void KalmanFilterEstimate::updateFromTopic() {
   tf2::Transform world2sensor;
   world2sensor.setOrigin(tf2::Vector3(msg->pose.pose.position.x, msg->pose.pose.position.y, msg->pose.pose.position.z));
   world2sensor.setRotation(tf2::Quaternion(msg->pose.pose.orientation.x, msg->pose.pose.orientation.y, 
-                                           msg->pose.pose.orientation.z, msg->pose.pose.orientation.w));
+                                             msg->pose.pose.orientation.z, msg->pose.pose.orientation.w));
 
   if (world2odom_.getRotation() == tf2::Quaternion::getIdentity()) {
     tf2::Transform odom2sensor;
@@ -191,6 +191,21 @@ void KalmanFilterEstimate::updateFromTopic() {
   }
   tf2::Transform odom2base = world2odom_.inverse() * world2sensor * base2sensor.inverse();
   vector3_t newPos(odom2base.getOrigin().x(), odom2base.getOrigin().y(), odom2base.getOrigin().z());
+
+  // --- Offset Calibration over the First 5 Messages ---
+  if (!odomInitialized_) {
+    odomOffsetSum_ += newPos;
+    ++odomMsgCount_;
+    if (odomMsgCount_ >= 5) {
+      odomOffset_ = odomOffsetSum_ / static_cast<scalar_t>(odomMsgCount_);
+      odomInitialized_ = true;
+      ROS_WARN("Odometry offset calibrated: [%f, %f, %f]", odomOffset_.x(), odomOffset_.y(), odomOffset_.z());
+    }
+  }
+  
+  // Use the computed average offset (if available) to correct the measurement.
+  newPos -= odomOffset_;
+  // ------------------------------------------------------
 
   // Define measurement model H (only position update)
   Eigen::Matrix<scalar_t, 3, 18> h;
