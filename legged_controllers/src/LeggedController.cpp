@@ -18,7 +18,7 @@
 #include <ocs2_sqp/SqpMpc.h>
 
 #include <angles/angles.h>
-#include <legged_estimation/FromTopiceEstimate.h>
+#include <legged_estimation/FromTopicEstimate.h>
 #include <legged_estimation/LinearKalmanFilter.h>
 #include <legged_wbc/HierarchicalWbc.h>
 #include <legged_wbc/WeightedWbc.h>
