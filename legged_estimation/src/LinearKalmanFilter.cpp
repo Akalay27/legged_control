@@ -172,7 +172,7 @@ void KalmanFilterEstimate::updateFromTopic() {
   if (world2odom_.getRotation() == tf2::Quaternion::getIdentity()) {
     tf2::Transform odom2sensor;
     try {
-      geometry_msgs::TransformStamped tf_msg = tfBuffer_.lookupTransform("odom", msg->child_frame_id, msg->header.stamp);
+      geometry_msgs::TransformStamped tf_msg = tfBuffer_.lookupTransform("odom", "lidar_imu_frame", ros::Time(0));
       tf2::fromMsg(tf_msg.transform, odom2sensor);
     } catch (tf2::TransformException& ex) {
       ROS_WARN("%s", ex.what());
@@ -183,7 +183,8 @@ void KalmanFilterEstimate::updateFromTopic() {
 
   tf2::Transform base2sensor;
   try {
-    geometry_msgs::TransformStamped tf_msg = tfBuffer_.lookupTransform("base", msg->child_frame_id, msg->header.stamp);
+    // This is the frame from the URDF, not the one that fast-lio is publishing.
+    geometry_msgs::TransformStamped tf_msg = tfBuffer_.lookupTransform("base", "lidar_imu_frame", ros::Time(0));
     tf2::fromMsg(tf_msg.transform, base2sensor);
   } catch (tf2::TransformException& ex) {
     ROS_WARN("%s", ex.what());
@@ -191,6 +192,13 @@ void KalmanFilterEstimate::updateFromTopic() {
   }
   tf2::Transform odom2base = world2odom_.inverse() * world2sensor * base2sensor.inverse();
   vector3_t newPos(odom2base.getOrigin().x(), odom2base.getOrigin().y(), odom2base.getOrigin().z());
+
+  vector3_t currentPos = xHat_.segment<3>(0);
+  vector3_t diff = newPos - currentPos;
+  ROS_WARN_STREAM("Odometry Update - newPos: " << newPos.transpose()
+                   << ", current estimate: " << currentPos.transpose()
+                   << ", diff: " << diff.transpose()
+                   << ", norm: " << diff.norm());
 
   // Define measurement model H (only position update)
   Eigen::Matrix<scalar_t, 3, 18> h;
