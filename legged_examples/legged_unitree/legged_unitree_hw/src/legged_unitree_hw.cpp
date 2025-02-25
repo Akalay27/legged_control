@@ -57,11 +57,16 @@ int main(int argc, char** argv) {
     // Create the hardware interface specific to your robot
     std::shared_ptr<legged::UnitreeHW> unitreeHw = std::make_shared<legged::UnitreeHW>();
     // Initialize the hardware interface:
-    // 1. retrieve configuration from rosparam
-    // 2. initialize the hardware and interface it with ros_control
+    // 1. Retrieve configuration from rosparam.
+    // 2. Initialize the hardware and interface it with ros_control.
     unitreeHw->init(nh, robotHwNh);
 
-    // Start the control loop
+    // Calibrate the IMU on startup (blocking for, e.g., 1 second).
+    ROS_INFO("Calibrating IMU and Force Sensors on startup...");
+    unitreeHw->calibrate(5.0);
+    ROS_INFO("Calibration complete, HW started!");
+
+    // Start the control loop.
     legged::LeggedHWLoop controlLoop(nh, unitreeHw);
 
     // Wait until shutdown signal received
