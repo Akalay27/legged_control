@@ -221,37 +221,44 @@ bool UnitreeHW::setupImu() {
 
   return true;
 }
-
+/// New calibration function that accumulates both IMU and contact sensor data.
 void UnitreeHW::calibrate(double duration_sec) {
   int sampleCount = 0;
   std::array<double, 3> gyroSum   = {0.0, 0.0, 0.0};
   std::array<double, 3> accelSum  = {0.0, 0.0, 0.0};
+  // Prepare a container to sum contact sensor forces.
+  std::vector<double> contactBiasSum(CONTACT_SENSOR_NAMES.size(), 0.0);
+
   ros::Time startTime = ros::Time::now();
+  // Assume the sensor is level during calibration.
   const double g = 9.81;
   std::array<double, 3> gravityRef = {0.0, 0.0, g};
 
-  ROS_INFO("Starting IMU calibration for %.2f seconds...", duration_sec);
-  // Loop for the desired duration, receiving UDP packets and accumulating IMU data.
+  ROS_INFO("Starting calibration for %.2f seconds...", duration_sec);
   while (ros::ok() && (ros::Time::now() - startTime).toSec() < duration_sec) {
     udp_->Recv();
     udp_->GetRecv(lowState_);
 
-    // Accumulate gyroscope readings
+    // Accumulate IMU data.
     gyroSum[0]  += lowState_.imu.gyroscope[0];
     gyroSum[1]  += lowState_.imu.gyroscope[1];
     gyroSum[2]  += lowState_.imu.gyroscope[2];
 
-    // Accumulate accelerometer readings
     accelSum[0] += lowState_.imu.accelerometer[0];
     accelSum[1] += lowState_.imu.accelerometer[1];
     accelSum[2] += lowState_.imu.accelerometer[2];
 
+    // Accumulate contact sensor force data.
+    for (size_t i = 0; i < CONTACT_SENSOR_NAMES.size(); ++i) {
+      contactBiasSum[i] += lowState_.footForce[i];
+    }
+
     sampleCount++;
-    ros::Duration(0.01).sleep();  // Sleep a little between samples.
+    ros::Duration(0.01).sleep();  // Adjust sample delay as needed.
   }
 
   if (sampleCount > 0) {
-    // Compute average values.
+    // Compute average IMU values.
     double avg_gyro[3] = {gyroSum[0] / sampleCount,
                           gyroSum[1] / sampleCount,
                           gyroSum[2] / sampleCount};
@@ -260,24 +267,30 @@ void UnitreeHW::calibrate(double duration_sec) {
                            accelSum[1] / sampleCount,
                            accelSum[2] / sampleCount};
 
-    // Compute accelerometer bias.
     // Under the assumption that when level and static:
-    //    avg_accel = bias + gravityRef
-    // Hence:
-    //    bias = avg_accel - gravityRef
+    //   avg_accel = bias + gravityRef
+    // Therefore, bias = avg_accel - gravityRef.
     accelBias_[0] = avg_accel[0] - gravityRef[0];
     accelBias_[1] = avg_accel[1] - gravityRef[1];
     accelBias_[2] = avg_accel[2] - gravityRef[2];
 
-    // For the gyroscope, we simply take the average.
+    // Set the gyroscope bias to the computed average.
     gyroBias_[0] = avg_gyro[0];
     gyroBias_[1] = avg_gyro[1];
     gyroBias_[2] = avg_gyro[2];
   }
-
   imuCalibrated_ = true;
-  ROS_INFO("IMU calibration complete. Gyro bias: [%.4f, %.4f, %.4f]",
+  ROS_WARN("IMU calibration complete. Gyro bias: [%.4f, %.4f, %.4f]",
            gyroBias_[0], gyroBias_[1], gyroBias_[2]);
+  ROS_WARN("Accel bias: [%.4f, %.4f, %.4f]",
+           accelBias_[0], accelBias_[1], accelBias_[2]);
+
+  // Compute and store the contact sensor biases.
+  for (size_t i = 0; i < CONTACT_SENSOR_NAMES.size(); ++i) {
+    contactBias_[i] = contactBiasSum[i] / sampleCount;
+    ROS_WARN("Contact sensor %s bias: %.4f", CONTACT_SENSOR_NAMES[i].c_str(), contactBias_[i]);
+  }
+  contactCalibrated_ = true;
 }
 
 bool UnitreeHW::setupContactSensor(ros::NodeHandle& nh) {

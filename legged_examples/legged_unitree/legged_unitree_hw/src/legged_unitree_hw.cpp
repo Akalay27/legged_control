@@ -64,7 +64,7 @@ int main(int argc, char** argv) {
     // Calibrate the IMU on startup (blocking for, e.g., 1 second).
     ROS_INFO("Calibrating IMU and Force Sensors on startup...");
     unitreeHw->calibrate(5.0);
-    ROS_INFO("Calibration complete, HW started!");
+    ROS_WARN("Calibration complete, HW started!");
 
     // Start the control loop.
     legged::LeggedHWLoop controlLoop(nh, unitreeHw);

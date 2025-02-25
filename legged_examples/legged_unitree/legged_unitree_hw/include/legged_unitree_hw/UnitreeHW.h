@@ -73,6 +73,7 @@ class UnitreeHW : public LeggedHW {
 
   void calibrate(double duration_sec);
   bool imuCalibrated() const { return imuCalibrated_; }
+  bool contactCalibrated() const { return contactCalibrated_; }
  private:
   bool setupJoints();
 
@@ -97,6 +98,7 @@ class UnitreeHW : public LeggedHW {
   int contactThreshold_{};
 
   bool imuCalibrated_ = false;
+  bool contactCalibrated_ = false;
   std::array<double, 3> gyroBias_ = {0.0, 0.0, 0.0};
   std::array<double, 3> accelBias_ = {0.0, 0.0, 0.0};
 
