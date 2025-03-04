@@ -71,6 +71,9 @@ class UnitreeHW : public LeggedHW {
    */
   void write(const ros::Time& time, const ros::Duration& period) override;
 
+  void calibrate(double duration_sec);
+  bool imuCalibrated() const { return imuCalibrated_; }
+  bool contactCalibrated() const { return contactCalibrated_; }
  private:
   bool setupJoints();
 
@@ -94,6 +97,11 @@ class UnitreeHW : public LeggedHW {
   int powerLimit_{};
   int contactThreshold_{};
 
+  bool imuCalibrated_ = false;
+  bool contactCalibrated_ = false;
+  std::array<double, 3> gyroBias_ = {0.0, 0.0, 0.0};
+  std::array<double, 3> accelBias_ = {0.0, 0.0, 0.0};
+
   // ros message and publisher for vilo
   sensor_msgs::JointState joint_foot_msg;
   sensor_msgs::Imu imu_msg;
@@ -101,6 +109,8 @@ class UnitreeHW : public LeggedHW {
   ros::Publisher joint_foot_pub;
   std::vector<int> swap_joint_indices;
   std::vector<int> swap_foot_indices;
+
+
 };
 
 }  // namespace legged
