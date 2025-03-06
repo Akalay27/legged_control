@@ -231,6 +231,8 @@ void KalmanFilterEstimate::updateFromTopic() {
           msg->pose.covariance[6], msg->pose.covariance[7], msg->pose.covariance[8],
           msg->pose.covariance[12],msg->pose.covariance[13],msg->pose.covariance[14];
 
+  // Fast-LIO has higher covariance, so let's make Rpos a bit bigger
+  Rpos *= 10.0;
   // Innovation (residual)
   Eigen::Vector3d y = posOdom - H * xHat_;
 
