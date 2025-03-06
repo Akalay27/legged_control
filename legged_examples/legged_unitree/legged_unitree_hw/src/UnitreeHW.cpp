@@ -156,7 +156,7 @@ void UnitreeHW::read(const ros::Time& currTime /*time*/, const ros::Duration& /*
   }
   joint_foot_pub.publish(joint_foot_msg);
 
-  updateJoystick(time);
+  updateJoystick(currTime);
 }
 
 void UnitreeHW::write(const ros::Time& /*time*/, const ros::Duration& /*period*/) {

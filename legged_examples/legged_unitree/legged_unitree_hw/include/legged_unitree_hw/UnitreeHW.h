@@ -74,6 +74,8 @@ class UnitreeHW : public LeggedHW {
   void calibrate(double duration_sec);
   bool imuCalibrated() const { return imuCalibrated_; }
   bool contactCalibrated() const { return contactCalibrated_; }
+
+  void updateJoystick(const ros::Time& time);
  private:
   bool setupJoints();
 
@@ -107,10 +109,11 @@ class UnitreeHW : public LeggedHW {
   sensor_msgs::Imu imu_msg;
   ros::Publisher imu_pub;
   ros::Publisher joint_foot_pub;
+  ros::Time lastJoyPub_;
   std::vector<int> swap_joint_indices;
   std::vector<int> swap_foot_indices;
   ros::Publisher joyPublisher_;
-  void UnitreeHW::updateJoystick(const ros::Time& time)
+  
 
 
 };
