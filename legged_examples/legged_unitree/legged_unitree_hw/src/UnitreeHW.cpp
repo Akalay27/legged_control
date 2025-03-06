@@ -51,7 +51,7 @@ bool UnitreeHW::init(ros::NodeHandle& root_nh, ros::NodeHandle& robot_hw_nh) {
     return false;
   }
 
-  // joyPublisher_ = root_nh.advertise<sensor_msgs::Joy>("/joy", 10);
+  joyPublisher_ = root_nh.advertise<sensor_msgs::Joy>("/joy", 10);
 
   imu_pub = robot_hw_nh.advertise<sensor_msgs::Imu>("/unitree_hardware/imu", 100);
   joint_foot_pub = robot_hw_nh.advertise<sensor_msgs::JointState>("/unitree_hardware/joint_foot", 100);
@@ -155,6 +155,8 @@ void UnitreeHW::read(const ros::Time& currTime /*time*/, const ros::Duration& /*
     joint_foot_msg.effort[NUM_DOF + i] = lowState_.footForce[swap_i] - contactBias_[swap_i];
   }
   joint_foot_pub.publish(joint_foot_msg);
+
+  updateJoystick(time);
 }
 
 void UnitreeHW::write(const ros::Time& /*time*/, const ros::Duration& /*period*/) {
@@ -299,6 +301,31 @@ bool UnitreeHW::setupContactSensor(ros::NodeHandle& nh) {
     contactSensorInterface_.registerHandle(ContactSensorHandle(CONTACT_SENSOR_NAMES[i], &contactState_[i]));
   }
   return true;
+}
+
+void UnitreeHW::updateJoystick(const ros::Time& time) {
+  if ((time - lastJoyPub_).toSec() < 1 / 50.) {
+    return;
+  }
+  lastJoyPub_ = time;
+  xRockerBtnDataStruct keyData;
+  memcpy(&keyData, &lowState_.wirelessRemote[0], 40);
+  sensor_msgs::Joy joyMsg;  // Pack as same as Logitech F710
+  joyMsg.axes.push_back(-keyData.lx);
+  joyMsg.axes.push_back(keyData.ly);
+  joyMsg.axes.push_back(-keyData.rx);
+  joyMsg.axes.push_back(keyData.ry);
+  joyMsg.buttons.push_back(keyData.btn.components.X);
+  joyMsg.buttons.push_back(keyData.btn.components.A);
+  joyMsg.buttons.push_back(keyData.btn.components.B);
+  joyMsg.buttons.push_back(keyData.btn.components.Y);
+  joyMsg.buttons.push_back(keyData.btn.components.L1);
+  joyMsg.buttons.push_back(keyData.btn.components.R1);
+  joyMsg.buttons.push_back(keyData.btn.components.L2);
+  joyMsg.buttons.push_back(keyData.btn.components.R2);
+  joyMsg.buttons.push_back(keyData.btn.components.select);
+  joyMsg.buttons.push_back(keyData.btn.components.start);
+  joyPublisher_.publish(joyMsg);
 }
 
 }  // namespace legged

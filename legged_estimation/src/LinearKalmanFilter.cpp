@@ -215,17 +215,12 @@ void KalmanFilterEstimate::updateFromTopic() {
                           odom2base.getOrigin().y(),
                           odom2base.getOrigin().z());
 
-  vector3_t currentPos = xHat_.segment<3>(0);
-  vector3_t diff = newPos - currentPos;
-  ROS_WARN_STREAM("Odometry Update - newPos: " << newPos.transpose()
-                   << ", current estimate: " << currentPos.transpose()
-                   << ", diff: " << diff.transpose()
-                   << ", norm: " << diff.norm());
-
-  // Define measurement model H (only position update)
-  Eigen::Matrix<scalar_t, 3, 18> h;
-  h.setZero();
-  h.block(0, 0, 3, 3) = Eigen::Matrix<scalar_t, 3, 3>::Identity();
+  // The measurement model H only updates the position portion of xHat_.
+  //  xHat_ = [ px, py, pz, vx, vy, vz, footPositions(12) ]
+  // So:
+  Eigen::Matrix<double, 3, 18> H;
+  H.setZero();
+  H.block<3,3>(0,0) = Eigen::Matrix3d::Identity();
 
   // Covariance of the odometry position. 
   // We'll read it from the top-left 3x3 of msg->pose.covariance:

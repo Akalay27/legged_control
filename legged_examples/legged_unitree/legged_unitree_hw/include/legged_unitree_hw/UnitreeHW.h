@@ -109,6 +109,8 @@ class UnitreeHW : public LeggedHW {
   ros::Publisher joint_foot_pub;
   std::vector<int> swap_joint_indices;
   std::vector<int> swap_foot_indices;
+  ros::Publisher joyPublisher_;
+  void UnitreeHW::updateJoystick(const ros::Time& time)
 
 
 };
