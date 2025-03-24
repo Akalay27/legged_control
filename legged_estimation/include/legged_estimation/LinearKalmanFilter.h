@@ -62,6 +62,8 @@ class KalmanFilterEstimate : public StateEstimateBase {
   tf2::Transform world2odom_;
   std::string frameOdom_, frameGuess_;
   bool topicUpdated_;
+  ros::Time startupTime_;
+  bool _slamStarted;
 };
 
 }  // namespace legged
