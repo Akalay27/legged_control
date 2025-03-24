@@ -167,7 +167,7 @@ void KalmanFilterEstimate::updateFromTopic() {
   // Only process if at least 1 second has passed since startup
   if (!_slamStarted && (ros::Time::now() - startupTime_) < ros::Duration(1.0)) {
     return;
-  } else {
+  } else if (!_slamStarted) {
     _slamStarted = true;
     ROS_WARN("Fast-LIO usage started, processing topic data.");
   }
