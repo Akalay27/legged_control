@@ -53,7 +53,7 @@ KalmanFilterEstimate::KalmanFilterEstimate(PinocchioInterface pinocchioInterface
   eeKinematics_->setPinocchioInterface(pinocchioInterface_);
 
   world2odom_.setRotation(tf2::Quaternion::getIdentity());
-  sub_ = ros::NodeHandle().subscribe<nav_msgs::Odometry>("/Odometry", 10, &KalmanFilterEstimate::callback, this);
+  sub_ = ros::NodeHandle().subscribe<nav_msgs::Odometry>("/laser_odometry", 10, &KalmanFilterEstimate::callback, this);
   startupTime_ = ros::Time::now();
   _slamStarted = false;
 }
